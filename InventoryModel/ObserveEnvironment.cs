@@ -135,32 +135,32 @@ namespace Observe.EntityExplorer
 
                     // Looks like for some environments query.worksheetSearch does not return stages, but the query.worksheet does.
                     // If we see no stages, maybe that's what's going on? So retrieve it again and sub out the raw data
-                    List<ObsWorksheet> allWorksheetsWithoutStages = allWorksheets.Where(w => w.NumStages == 0).ToList();
-                    var allWorksheetsWithoutStagesChunks = allWorksheetsWithoutStages.Chunk(10);
-                    Parallel.ForEach<ObsWorksheet[], int>(
-                        allWorksheetsWithoutStagesChunks,
-                        new ParallelOptions(), 
-                        () => { 
-                            // init
-                            return 0;
-                        },
-                        (chunkOfWorksheets, loopState, subtotal) => {
-                            // Body
-                            for (int i = 0; i <= chunkOfWorksheets.Length - 1; i++)
-                            {
-                                ObsWorksheet worksheet = chunkOfWorksheets[i];
-                                ObsWorksheet worksheetSingle = getWorksheet(currentUser, worksheet.id);
-                                if (worksheetSingle != null)
-                                {
-                                    worksheet._raw = worksheetSingle._raw;
-                                }
-                            }
-                            return 0;
-                        },
-                        c => {
-                            // Finally
-                        }
-                    );
+                    // List<ObsWorksheet> allWorksheetsWithoutStages = allWorksheets.Where(w => w.NumStages == 0).ToList();
+                    // var allWorksheetsWithoutStagesChunks = allWorksheetsWithoutStages.Chunk(10);
+                    // Parallel.ForEach<ObsWorksheet[], int>(
+                    //     allWorksheetsWithoutStagesChunks,
+                    //     new ParallelOptions(), 
+                    //     () => { 
+                    //         // init
+                    //         return 0;
+                    //     },
+                    //     (chunkOfWorksheets, loopState, subtotal) => {
+                    //         // Body
+                    //         for (int i = 0; i <= chunkOfWorksheets.Length - 1; i++)
+                    //         {
+                    //             ObsWorksheet worksheet = chunkOfWorksheets[i];
+                    //             ObsWorksheet worksheetSingle = getWorksheet(currentUser, worksheet.id);
+                    //             if (worksheetSingle != null)
+                    //             {
+                    //                 worksheet._raw = worksheetSingle._raw;
+                    //             }
+                    //         }
+                    //         return 0;
+                    //     },
+                    //     c => {
+                    //         // Finally
+                    //     }
+                    // );
                 },
                 () => // Metrics
                 {

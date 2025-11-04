@@ -51,7 +51,9 @@
     <tr>
         <td>Name</td>
         <td>
-            @Model.CurrentMetric.name in @Model.CurrentMetric.datasetName (@Model.CurrentMetric.datasetId)
+            @Model.CurrentMetric.name
+            <br/>
+            @Model.CurrentMetric.nameWithPath in @Model.CurrentMetric.datasetName (@Model.CurrentMetric.datasetId)
             <br/>
             <code id="searchQuery" class="language-json">"@Model.CurrentMetric.name"</code>
         </td>

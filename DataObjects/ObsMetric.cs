@@ -7,6 +7,7 @@ namespace Observe.EntityExplorer.DataObjects
         public string datasetId { get; set; } = String.Empty;
         public string datasetPackage { get; set; } = String.Empty;
         public string datasetName { get; set; } = String.Empty;
+        public string nameWithPath { get; set; } = String.Empty;
         public string type { get; set; }
         public string unit { get; set; }
         public string rollup { get; set; }
@@ -121,6 +122,7 @@ namespace Observe.EntityExplorer.DataObjects
             if (metricObject != null)
             {
                 this.name = JSONHelper.getStringValueFromJToken(metricObject, "name");
+                this.nameWithPath = JSONHelper.getStringValueFromJToken(metricObject, "nameWithPath");
                 this.type = JSONHelper.getStringValueFromJToken(metricObject, "type");
                 this.unit = JSONHelper.getStringValueFromJToken(metricObject, "unit");
                 this.description = JSONHelper.getStringValueFromJToken(metricObject, "description");
@@ -146,7 +148,7 @@ namespace Observe.EntityExplorer.DataObjects
                 }
             }
 
-            this.id = String.Format("{0}/{1}", this.datasetId, this.name);
+            this.id = String.Format("{0}/{1}", this.datasetId, this.nameWithPath);
         }
 
         public void AddSupportingDataset(Dictionary<string, ObsDataset> allDatasetsDict)
