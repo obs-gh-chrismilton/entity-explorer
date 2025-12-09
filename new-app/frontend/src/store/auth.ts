@@ -6,7 +6,8 @@ interface AuthState {
   observeUrl: string;
   username: string;
   token: string;
-  login: (url: string, username: string, token: string) => void;
+  password: string;
+  login: (url: string, username: string, token: string, password?: string) => void;
   logout: () => void;
 }
 
@@ -17,12 +18,14 @@ export const useAuthStore = create<AuthState>()(
       observeUrl: '',
       username: '',
       token: '',
-      login: (url: string, username: string, token: string) =>
+      password: '',
+      login: (url: string, username: string, token: string, password?: string) =>
         set({
           isAuthenticated: true,
           observeUrl: url,
           username,
           token,
+          password: password || '',
         }),
       logout: () =>
         set({
@@ -30,6 +33,7 @@ export const useAuthStore = create<AuthState>()(
           observeUrl: '',
           username: '',
           token: '',
+          password: '',
         }),
     }),
     {

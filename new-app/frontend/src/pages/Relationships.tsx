@@ -18,7 +18,7 @@ export default function Relationships() {
 
   const loadRelationships = async () => {
     try {
-      const data = await api.get<Relationship[]>('/relationships');
+      const data = await api.get<Relationship[]>('/entities/relationships');
       setRelationships(data);
     } catch (error) {
       console.error('Failed to load relationships:', error);

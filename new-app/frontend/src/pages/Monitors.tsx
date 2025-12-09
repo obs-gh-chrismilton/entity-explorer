@@ -26,7 +26,7 @@ export default function Monitors() {
 
   const loadMonitors = async () => {
     try {
-      const data = await api.get<Monitor[]>('/monitors');
+      const data = await api.get<Monitor[]>('/entities/monitors');
       setMonitors(data);
       setFilteredMonitors(data);
     } catch (error) {

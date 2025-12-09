@@ -47,6 +47,163 @@ if (process.env.NODE_ENV === 'production') {
   app.use(morgan('dev'));
 }
 
+// ============================================================================
+// TEMPORARY TEST ENDPOINT - REMOVE AFTER TESTING GRAPHQL STRUCTURE
+// ============================================================================
+// This endpoint is placed BEFORE auth middleware to allow unauthenticated
+// testing of GraphQL queries during development.
+//
+// ⚠️  WARNING: This endpoint exposes Observe data without authentication!
+// ⚠️  MUST BE REMOVED before deploying to production!
+//
+// Usage: GET /api/test/graphql-structure?url=https://156247313073.observeinc.com&token=YOUR_TOKEN
+// ============================================================================
+app.get('/api/test/graphql-structure', async (req, res) => {
+  try {
+    const { url, token } = req.query;
+
+    if (!url || !token) {
+      return res.status(400).json({
+        error: 'Missing required query params: url, token',
+        example: '/api/test/graphql-structure?url=https://156247313073.observeinc.com&token=YOUR_TOKEN'
+      });
+    }
+
+    const axios = require('axios');
+    const baseUrl = String(url).replace(/\/$/, '');
+    const tokenStr = String(token);
+
+    // Extract customer ID from URL (e.g., https://156247313073.observeinc.com -> 156247313073)
+    const urlMatch = baseUrl.match(/https?:\/\/(\d+)\.observe/);
+    const customerId = urlMatch ? urlMatch[1] : null;
+
+    // Simple test query to check authentication
+    const testQuery = `
+      query TestAuth {
+        currentUser {
+          id
+          email
+        }
+      }
+    `;
+
+    // Try different auth header formats
+    const authFormats = [
+      {
+        name: 'Bearer {customerId} {token}',
+        header: customerId ? `Bearer ${customerId} ${tokenStr}` : null,
+        skip: !customerId
+      },
+      {
+        name: 'Bearer {token}',
+        header: `Bearer ${tokenStr}`,
+        skip: false
+      },
+      {
+        name: '{customerId} {token}',
+        header: customerId ? `${customerId} ${tokenStr}` : null,
+        skip: !customerId
+      },
+      {
+        name: '{token}',
+        header: tokenStr,
+        skip: false
+      }
+    ];
+
+    const results = [];
+
+    for (const format of authFormats) {
+      if (format.skip) {
+        results.push({
+          format: format.name,
+          skipped: true,
+          reason: 'No customer ID available'
+        });
+        continue;
+      }
+
+      try {
+        console.log(`\nTrying auth format: ${format.name}`);
+        console.log(`Authorization header: ${format.header?.substring(0, 40)}...`);
+
+        const response = await axios.post(
+          `${baseUrl}/v1/meta`,
+          {
+            query: testQuery,
+            variables: {}
+          },
+          {
+            headers: {
+              'Authorization': format.header,
+              'Content-Type': 'application/json'
+            },
+            timeout: 10000
+          }
+        );
+
+        const hasData = response.data?.data?.currentUser;
+        const hasErrors = response.data?.errors;
+
+        results.push({
+          format: format.name,
+          success: hasData && !hasErrors,
+          statusCode: response.status,
+          hasData: !!hasData,
+          hasErrors: !!hasErrors,
+          currentUser: hasData ? response.data.data.currentUser : null,
+          errors: hasErrors ? response.data.errors : null
+        });
+
+        console.log(`Result: ${hasData && !hasErrors ? 'SUCCESS' : 'FAILED'}`);
+        if (hasData) {
+          console.log(`User data: ${JSON.stringify(response.data.data.currentUser)}`);
+        }
+        if (hasErrors) {
+          console.log(`Errors: ${JSON.stringify(response.data.errors)}`);
+        }
+
+      } catch (error: any) {
+        results.push({
+          format: format.name,
+          success: false,
+          statusCode: error.response?.status || null,
+          error: error.message,
+          errorDetails: error.response?.data || null
+        });
+
+        console.log(`Result: ERROR - ${error.message}`);
+      }
+    }
+
+    // Find which format worked
+    const workingFormat = results.find(r => r.success);
+
+    res.json({
+      tested: results.length,
+      workingFormat: workingFormat?.format || 'None',
+      results,
+      summary: {
+        customerId,
+        baseUrl,
+        recommendation: workingFormat
+          ? `Use auth format: ${workingFormat.format}`
+          : 'No working auth format found. Check token validity.'
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Test endpoint error:', error.message);
+    res.status(500).json({
+      error: error.message,
+      stack: error.stack
+    });
+  }
+});
+// ============================================================================
+// END TEMPORARY TEST ENDPOINT
+// ============================================================================
+
 // Session middleware
 const sessionSecret = process.env.SESSION_SECRET || 'entity-explorer-secret-key-change-in-production';
 const isProduction = process.env.NODE_ENV === 'production';

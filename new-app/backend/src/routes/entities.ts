@@ -19,11 +19,18 @@ const router = Router();
 router.use(requireAuth);
 
 // Helper function to get Observe client from session
-function getObserveClient(req: Request): ObserveClient {
+async function getObserveClient(req: Request): Promise<ObserveClient> {
   if (!req.session.observeToken || !req.session.observeUrl) {
     throw new Error('Not authenticated');
   }
-  return new ObserveClient(req.session.observeUrl, req.session.observeToken);
+  const client = new ObserveClient(req.session.observeUrl, req.session.observeToken);
+
+  // CRITICAL: Call getCurrentUser() to populate workspaceId
+  // Without this, workspaceId remains undefined and queries fail
+  await client.getCurrentUser();
+  console.log('DEBUG getObserveClient - client initialized with workspaceId:', (client as any).workspaceId);
+
+  return client;
 }
 
 // Helper function to generate cache key
@@ -34,7 +41,7 @@ function getCacheKey(userId: string, key: string): string {
 // GET /api/entities/summary - Get environment summary stats
 router.get('/summary', async (req: Request, res: Response): Promise<void> => {
   try {
-    const client = getObserveClient(req);
+    const client = await getObserveClient(req);
     const userId = req.session.user?.id || 'unknown';
     const cacheKey = getCacheKey(userId, 'summary');
 
@@ -95,7 +102,7 @@ router.get('/summary', async (req: Request, res: Response): Promise<void> => {
 // GET /api/entities/datasets - Get all datasets
 router.get('/datasets', async (req: Request, res: Response): Promise<void> => {
   try {
-    const client = getObserveClient(req);
+    const client = await getObserveClient(req);
     const userId = req.session.user?.id || 'unknown';
     const cacheKey = getCacheKey(userId, 'datasets');
 
@@ -120,7 +127,7 @@ router.get('/datasets', async (req: Request, res: Response): Promise<void> => {
 // GET /api/entities/datasets/:id - Get dataset details
 router.get('/datasets/:id', async (req: Request, res: Response): Promise<void> => {
   try {
-    const client = getObserveClient(req);
+    const client = await getObserveClient(req);
     const userId = req.session.user?.id || 'unknown';
     const cacheKey = getCacheKey(userId, 'datasets');
 
@@ -154,7 +161,7 @@ router.get('/datasets/:id', async (req: Request, res: Response): Promise<void> =
 // GET /api/entities/dashboards - Get all dashboards
 router.get('/dashboards', async (req: Request, res: Response): Promise<void> => {
   try {
-    const client = getObserveClient(req);
+    const client = await getObserveClient(req);
     const userId = req.session.user?.id || 'unknown';
     const cacheKey = getCacheKey(userId, 'dashboards');
 
@@ -178,7 +185,7 @@ router.get('/dashboards', async (req: Request, res: Response): Promise<void> => 
 // GET /api/entities/dashboards/:id - Get dashboard details
 router.get('/dashboards/:id', async (req: Request, res: Response): Promise<void> => {
   try {
-    const client = getObserveClient(req);
+    const client = await getObserveClient(req);
     const userId = req.session.user?.id || 'unknown';
     const cacheKey = getCacheKey(userId, 'dashboards');
 
@@ -212,7 +219,7 @@ router.get('/dashboards/:id', async (req: Request, res: Response): Promise<void>
 // GET /api/entities/monitors - Get all monitors
 router.get('/monitors', async (req: Request, res: Response): Promise<void> => {
   try {
-    const client = getObserveClient(req);
+    const client = await getObserveClient(req);
     const userId = req.session.user?.id || 'unknown';
     const cacheKey = getCacheKey(userId, 'monitors');
 
@@ -236,7 +243,7 @@ router.get('/monitors', async (req: Request, res: Response): Promise<void> => {
 // GET /api/entities/monitors/:id - Get monitor details
 router.get('/monitors/:id', async (req: Request, res: Response): Promise<void> => {
   try {
-    const client = getObserveClient(req);
+    const client = await getObserveClient(req);
     const userId = req.session.user?.id || 'unknown';
     const cacheKey = getCacheKey(userId, 'monitors');
 
@@ -270,7 +277,7 @@ router.get('/monitors/:id', async (req: Request, res: Response): Promise<void> =
 // GET /api/entities/worksheets - Get all worksheets
 router.get('/worksheets', async (req: Request, res: Response): Promise<void> => {
   try {
-    const client = getObserveClient(req);
+    const client = await getObserveClient(req);
     const userId = req.session.user?.id || 'unknown';
     const cacheKey = getCacheKey(userId, 'worksheets');
 
@@ -294,7 +301,7 @@ router.get('/worksheets', async (req: Request, res: Response): Promise<void> => 
 // GET /api/entities/worksheets/:id - Get worksheet details
 router.get('/worksheets/:id', async (req: Request, res: Response): Promise<void> => {
   try {
-    const client = getObserveClient(req);
+    const client = await getObserveClient(req);
     const userId = req.session.user?.id || 'unknown';
     const cacheKey = getCacheKey(userId, 'worksheets');
 
@@ -328,7 +335,7 @@ router.get('/worksheets/:id', async (req: Request, res: Response): Promise<void>
 // GET /api/entities/relationships - Get all relationships
 router.get('/relationships', async (req: Request, res: Response): Promise<void> => {
   try {
-    const client = getObserveClient(req);
+    const client = await getObserveClient(req);
     const userId = req.session.user?.id || 'unknown';
     const cacheKey = getCacheKey(userId, 'relationships');
 
@@ -362,7 +369,7 @@ router.get('/search', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const client = getObserveClient(req);
+    const client = await getObserveClient(req);
     const userId = req.session.user?.id || 'unknown';
 
     // Get all entities from cache or fetch

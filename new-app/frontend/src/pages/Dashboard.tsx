@@ -28,7 +28,7 @@ export default function Dashboard() {
 
   const loadStats = async () => {
     try {
-      const data = await api.get<Stats>('/stats');
+      const data = await api.get<Stats>('/entities/summary');
       setStats(data);
     } catch (error) {
       console.error('Failed to load stats:', error);

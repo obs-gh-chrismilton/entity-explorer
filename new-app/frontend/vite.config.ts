@@ -11,10 +11,13 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3000,
+    port: 5173,
+    allowedHosts: ['localhost', 'host.docker.internal'],
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        // PROXY_TARGET is for server-side (Node.js), VITE_API_URL is for client-side (browser)
+        // In Docker: use 'backend' service name. Locally: use localhost:3001
+        target: process.env.PROXY_TARGET || 'http://backend:3001',
         changeOrigin: true,
       },
     },

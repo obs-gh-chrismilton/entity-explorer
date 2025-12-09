@@ -13,11 +13,18 @@ const router = Router();
 router.use(requireAuth);
 
 // Helper function to get Observe client from session
-function getObserveClient(req: Request): ObserveClient {
+async function getObserveClient(req: Request): Promise<ObserveClient> {
   if (!req.session.observeToken || !req.session.observeUrl) {
     throw new Error('Not authenticated');
   }
-  return new ObserveClient(req.session.observeUrl, req.session.observeToken);
+  const client = new ObserveClient(req.session.observeUrl, req.session.observeToken);
+
+  // CRITICAL: Call getCurrentUser() to populate workspaceId
+  // Without this, workspaceId remains undefined and queries fail
+  await client.getCurrentUser();
+  console.log('DEBUG getObserveClient - client initialized with workspaceId:', (client as any).workspaceId);
+
+  return client;
 }
 
 // Helper function to generate cache key
@@ -65,7 +72,7 @@ router.post('/chat', async (req: Request, res: Response): Promise<void> => {
     }
 
     // Get Observe client and fetch context
-    const client = getObserveClient(req);
+    const client = await getObserveClient(req);
     const userId = req.session.user?.id || 'unknown';
 
     // Get entities from cache or fetch
@@ -185,7 +192,7 @@ router.get('/suggestions', async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    const client = getObserveClient(req);
+    const client = await getObserveClient(req);
     const userId = req.session.user?.id || 'unknown';
     const cacheKey = getCacheKey(userId, 'ai_suggestions');
 

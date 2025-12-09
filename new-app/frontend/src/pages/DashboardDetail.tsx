@@ -22,7 +22,7 @@ export default function DashboardDetail() {
 
   const loadDashboard = async () => {
     try {
-      const data = await api.get<Dashboard>(`/dashboards/${id}`);
+      const data = await api.get<Dashboard>(`/entities/dashboards/${id}`);
       setDashboard(data);
     } catch (error) {
       console.error('Failed to load dashboard:', error);

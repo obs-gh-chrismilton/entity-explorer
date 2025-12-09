@@ -32,8 +32,34 @@ export default function Search() {
 
     setLoading(true);
     try {
-      const data = await api.get<SearchResult[]>('/search', { q: query });
-      setResults(data);
+      // Backend returns { query, count, results } wrapper
+      interface BackendSearchResult {
+        id: string;
+        type: string;
+        name: string;
+        description?: string;
+        relevance: number;
+        matches: Array<{ field: string; snippet: string }>;
+      }
+      interface SearchResponse {
+        query: string;
+        count: number;
+        results: BackendSearchResult[];
+      }
+
+      const response = await api.get<SearchResponse>('/entities/search', { q: query });
+
+      // Map backend response to frontend SearchResult format
+      const mappedResults: SearchResult[] = response.results.map((result) => ({
+        entityId: result.id,
+        entityName: result.name,
+        entityType: result.type,
+        matchedCode: result.matches?.[0]?.snippet || result.description || '',
+        context: result.description,
+        lineNumber: undefined,
+      }));
+
+      setResults(mappedResults);
       setSearchParams({ q: query });
     } catch (error) {
       console.error('Search failed:', error);

@@ -29,7 +29,7 @@ export default function Datasets() {
 
   const loadDatasets = async () => {
     try {
-      const data = await api.get<Dataset[]>('/datasets');
+      const data = await api.get<Dataset[]>('/entities/datasets');
       setDatasets(data);
       setFilteredDatasets(data);
     } catch (error) {

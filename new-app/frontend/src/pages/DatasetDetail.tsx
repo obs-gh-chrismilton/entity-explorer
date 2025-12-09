@@ -25,7 +25,7 @@ export default function DatasetDetail() {
 
   const loadDataset = async () => {
     try {
-      const data = await api.get<Dataset>(`/datasets/${id}`);
+      const data = await api.get<Dataset>(`/entities/datasets/${id}`);
       setDataset(data);
     } catch (error) {
       console.error('Failed to load dataset:', error);
@@ -36,7 +36,7 @@ export default function DatasetDetail() {
 
   const loadRelationships = async () => {
     try {
-      const data = await api.get<Relationship[]>(`/datasets/${id}/relationships`);
+      const data = await api.get<Relationship[]>(`/entities/datasets/${id}/relationships`);
       setRelationships(data);
     } catch (error) {
       console.error('Failed to load relationships:', error);

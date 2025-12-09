@@ -43,17 +43,22 @@ export default function AIChat() {
     setLoading(true);
 
     try {
-      const response = await api.post<{ response: string; entities?: string[] }>('/ai/chat', {
-        message: text,
-        history: messages,
+      // Convert history to the format the backend expects
+      const apiMessages = [
+        ...messages.map((m) => ({ role: m.role, content: m.content })),
+        { role: 'user' as const, content: text },
+      ];
+
+      const response = await api.post<{ message: string; suggestions?: string[]; relatedEntities?: Array<{ id: string; type: string; name: string }> }>('/ai/chat', {
+        messages: apiMessages,
       });
 
       const assistantMessage: AIMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: response.response,
+        content: response.message,
         timestamp: new Date(),
-        entities: response.entities,
+        entities: response.relatedEntities?.map(e => e.name),
       };
 
       setMessages((prev) => [...prev, assistantMessage]);

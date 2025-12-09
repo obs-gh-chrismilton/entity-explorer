@@ -9,17 +9,15 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.backend
-      target: builder  # Use builder stage for development
+      target: deps  # Use deps stage for development (has devDependencies like tsx)
     command: npm run dev
     environment:
       - NODE_ENV=development
     volumes:
       # Mount source code for hot reload
       - ./backend/src:/app/src:delegated
-      - ./backend/package.json:/app/package.json:ro
       - ./backend/tsconfig.json:/app/tsconfig.json:ro
-      # Use named volume for node_modules to avoid conflicts
-      - backend-node-modules:/app/node_modules
+      # Note: node_modules comes from the Docker image (deps stage)
     ports:
       - "3001:3001"
       - "9229:9229"  # Node.js debugger port
@@ -41,23 +39,15 @@ services:
       - ./frontend/src:/app/src:delegated
       - ./frontend/public:/app/public:delegated
       - ./frontend/index.html:/app/index.html:ro
-      - ./frontend/package.json:/app/package.json:ro
       - ./frontend/vite.config.ts:/app/vite.config.ts:ro
       - ./frontend/tsconfig.json:/app/tsconfig.json:ro
       - ./frontend/tsconfig.node.json:/app/tsconfig.node.json:ro
       - ./frontend/tailwind.config.js:/app/tailwind.config.js:ro
       - ./frontend/postcss.config.js:/app/postcss.config.js:ro
-      # Use named volume for node_modules to avoid conflicts
-      - frontend-node-modules:/app/node_modules
+      # Note: node_modules comes from the Docker image (builder stage)
     ports:
       - "5173:5173"  # Vite dev server
     stdin_open: true
     tty: true
     depends_on:
       - backend
-
-volumes:
-  backend-node-modules:
-    name: entity-explorer-backend-node-modules
-  frontend-node-modules:
-    name: entity-explorer-frontend-node-modules

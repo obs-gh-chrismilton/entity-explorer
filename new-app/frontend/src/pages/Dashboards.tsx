@@ -27,7 +27,7 @@ export default function Dashboards() {
 
   const loadDashboards = async () => {
     try {
-      const data = await api.get<Dashboard[]>('/dashboards');
+      const data = await api.get<Dashboard[]>('/entities/dashboards');
       setDashboards(data);
       setFilteredDashboards(data);
     } catch (error) {

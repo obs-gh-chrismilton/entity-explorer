@@ -10,12 +10,13 @@ import { api } from '../lib/api';
 export default function Login() {
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
+  const { observeUrl, username: savedUsername, token: savedToken, password: savedPassword } = useAuthStore();
   const [authType, setAuthType] = useState<'password' | 'token'>('token');
   const [formData, setFormData] = useState({
-    url: '',
-    username: '',
-    password: '',
-    token: '',
+    url: observeUrl || '',
+    username: savedUsername || '',
+    password: savedPassword || '',
+    token: savedToken || '',
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -26,17 +27,23 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      const credentials = authType === 'token' ? formData.token : formData.password;
-
-      // Validate connection
-      await api.post('/auth/validate', {
-        url: formData.url,
+      // Build request body based on auth type
+      const requestBody = {
+        observeUrl: formData.url,
         username: formData.username,
-        credentials,
-      });
+        ...(authType === 'token'
+          ? { apiToken: formData.token }
+          : { password: formData.password }),
+      };
+
+      // Login via backend API
+      // api.post returns response.data directly, so 'response' is already the data object
+      const response = await api.post<{ success: boolean; user: { id: string; email: string; label: string } }>('/auth/login', requestBody);
 
       // Store credentials and navigate
-      login(formData.url, formData.username, credentials);
+      const token = authType === 'token' ? formData.token : '';
+      const password = authType === 'password' ? formData.password : '';
+      login(formData.url, response.user?.label || formData.username, token, password);
       navigate('/');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to connect. Please check your credentials.');
