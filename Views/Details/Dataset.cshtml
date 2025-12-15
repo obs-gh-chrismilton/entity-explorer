@@ -325,6 +325,13 @@
         <td>@Model.CurrentDataset.Acceleration.state</td>
         <td></td>
     </tr>
+    @if (@Model.CurrentDataset.Acceleration.ErrorMessage.Length > 0)
+    {
+        <tr>
+            <td>Error</td>
+            <td colspan="2">@Model.CurrentDataset.Acceleration.ErrorMessage</td>
+        </tr>
+    }
     <tr>
         <td>Always Accelerated</td>
         <td>@Model.CurrentDataset.Acceleration.alwaysAccelerated</td>

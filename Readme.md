@@ -12,11 +12,11 @@ Observe Entity Explorer can run on Windows, Mac or Linux. Binaries are in [Relea
 
 ### Install on OSX
 
-1. Install .NET 8.0 SDK
+1. Install .NET 10.0 SDK
 
-    * Download [Microsoft Downloads web site](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) with all instructions, or:
-        * Direct [x64](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/sdk-8.0.200-macos-x64-installer) installer
-        * Direct [arm64 (M1/M2)](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/sdk-8.0.200-macos-arm64-installer) installer
+    * Download [Microsoft Downloads web site](https://dotnet.microsoft.com/en-us/download/dotnet/10.0) with all instructions, or:
+        * Direct [x64](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-10.0.0-macos-x64-installer)installer
+        * Direct [arm64 (M1/M2/M3)](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-10.0.0-macos-arm64-installer) installer
     * OR
     * Homebrew [brew install dotnet](https://formulae.brew.sh/cask/dotnet)
 
@@ -78,7 +78,7 @@ Observe Entity Explorer can run on Windows, Mac or Linux. Binaries are in [Relea
 
 You can also run it from source.
 
-First, install .NET 9.0 SDK from [Microsoft Downloads web site](https://dotnet.microsoft.com/en-us/download/dotnet/9.0).
+First, install .NET 9.0 SDK from [Microsoft Downloads web site](https://dotnet.microsoft.com/en-us/download/dotnet/10.0).
 
 Then clone, build and run:
 
@@ -425,10 +425,6 @@ This table is followed by the repeated sections for each stage, containing:
 
 ![Dashboard Stage Detail](/docs/screenshots/details/dashboard/DashboardStageDetail.png?raw=true)
 
-Visual diagram showing relationship between inputs and stages of this dashboard.
-
-![Dashboard Stages Graph](/docs/screenshots/details/dashboard/DashboardStageDependencies.png?raw=true)
-
 ## Monitor v1 Detail
 
 Summary information about the monitor (legacy).
@@ -515,7 +511,6 @@ Created | Who and when created this object
 Updated | Who and when updates this object last
 
 ![Datastreams and Tokens](/docs/screenshots/list/datastream/DatastreamsAndTokens.png?raw=true)
-
 
 ## Logging
 

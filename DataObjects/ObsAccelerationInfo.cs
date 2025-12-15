@@ -53,6 +53,7 @@ namespace Observe.EntityExplorer.DataObjects
         // Effective on demand materialization is either the configured override value
         // for the dataset or the default value from the transformer config.        
         public TimeSpan EffectiveOnDemandMaterializationLength { get; set; }
+        public string ErrorMessage { get; set; } = String.Empty;
 
         public List<ObsTimeRange> AcceleratedRanges { get; set; } = new List<ObsTimeRange>(1);
         public List<ObsTimeRange> AcceleratedRangesTarget { get; set; } = new List<ObsTimeRange>(1);
@@ -132,7 +133,7 @@ namespace Observe.EntityExplorer.DataObjects
             {
                 foreach (JObject acceleratedRangeObject in acceleratedRangesArray)
                 {
-                    this.AcceleratedRanges.Add (new ObsTimeRange(acceleratedRangeObject));
+                    this.AcceleratedRanges.Add(new ObsTimeRange(acceleratedRangeObject));
                 }
             }
 
@@ -141,8 +142,14 @@ namespace Observe.EntityExplorer.DataObjects
             {
                 foreach (JObject acceleratedRangeObject in targetAcceleratedRangesArray)
                 {
-                    this.AcceleratedRangesTarget.Add (new ObsTimeRange(acceleratedRangeObject));
+                    this.AcceleratedRangesTarget.Add(new ObsTimeRange(acceleratedRangeObject));
                 }
+            }
+
+            JArray accelerationErrors = (JArray)JSONHelper.getJTokenValueFromJToken(entityObject, "errors");
+            if (accelerationErrors != null && accelerationErrors.Count > 0)
+            {
+                this.ErrorMessage = JSONHelper.getStringValueFromJToken(accelerationErrors[0], "errorText");
             }
         }
     }

@@ -20,7 +20,7 @@
 
 <p>
     <a href="#Datastreams">@Model.ObserveEnvironment.getIconType(new ObsDatastream()) Datastreams (@Model.ObserveEnvironment.AllDatastreamsDict.Count)</a>
-    <a href="#Tokens">@Model.ObserveEnvironment.getIconType(new ObsToken()) Token (@Model.ObserveEnvironment.AllTokensDict.Count)</a>
+    <a href="#Tokens">@Model.ObserveEnvironment.getIconType((ObsCompositeObject)new ObsToken()) Token (@Model.ObserveEnvironment.AllTokensDict.Count)</a>
 </p>
 
 <h2 id="DatastreamsDatastreams">@Model.ObserveEnvironment.getIconType(new ObsDatastream()) Datastreams (@Model.ObserveEnvironment.AllDatastreamsDict.Values.Count)</h2>
@@ -79,7 +79,7 @@
     </tbody>
 </table>
 
-<h2 id="Tokens">@Model.ObserveEnvironment.getIconType(new ObsToken()) Tokens (@Model.ObserveEnvironment.AllTokensDict.Values.Count)</h2>
+<h2 id="Tokens">@Model.ObserveEnvironment.getIconType((ObsCompositeObject)new ObsToken()) Tokens (@Model.ObserveEnvironment.AllTokensDict.Values.Count)</h2>
 <a href="#top">Back to Top</a>
 
 <table class="AlternatingRowTable SortableTable">
@@ -116,7 +116,7 @@
             <td><a href="@String.Format("{0}workspace/{1}/datastreams/{2}/{3}/{4}", @Model.CurrentUser.CustomerEnvironmentUrl, @Model.CurrentUser.WorkspaceID, entity.Parent.id, entity.kind, entity.id)">🛠️ Edit</a></td>
             <td>@Model.ObserveEnvironment.getIconOriginType(@entity) <span title="@entity.source">@entity.OriginType</span></td>
             <td>@entity.Parent.name</td>
-            <td>@Model.ObserveEnvironment.getIconTokenType(@entity) @entity.kind</td>
+            <td>@Model.ObserveEnvironment.getIconType(@entity) @entity.kind</td>
             <td>@entity.id</td>
             <td>@entity.name</td>
             <td>

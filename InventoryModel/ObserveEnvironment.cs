@@ -788,27 +788,29 @@ namespace Observe.EntityExplorer
                                     break;
 
                                 case ObsObjectOriginType.System:
-                                    List<ObsDataset> obsDatasetsMetric = allDatasetsInGroup.Where(d => (d.ObjectType & ObsCompositeObjectType.MetricSMADataset) == ObsCompositeObjectType.MetricSMADataset).ToList();
+                                    // Let's skip outputting those because they don't carry any helpfulness 
+                                    // like to metric-sma-for-#### or monitor/####
+                                    // List<ObsDataset> obsDatasetsMetric = allDatasetsInGroup.Where(d => (d.ObjectType & ObsCompositeObjectType.MetricSMADataset) == ObsCompositeObjectType.MetricSMADataset).ToList();
     
-                                    sb.AppendLine("  subgraph cluster_ds_metric_support {");
-                                    sb.AppendFormat("    label=\"{0} Metric Support Datasets ({1})\" style=\"filled\" fillcolor=\"paleturquoise\"", iconForGroup, obsDatasetsMetric.Count).AppendLine();
-                                    foreach(ObsDataset dataset in obsDatasetsMetric)
-                                    {
-                                        if (dataset == interestingObject) continue;
-                                        sb.AppendFormat("    {0}", getGraphVizNodeDefinition(dataset)).AppendLine();
-                                    }
-                                    sb.AppendLine("  }");
+                                    // sb.AppendLine("  subgraph cluster_ds_metric_support {");
+                                    // sb.AppendFormat("    label=\"{0} Metric Support Datasets ({1})\" style=\"filled\" fillcolor=\"paleturquoise\"", iconForGroup, obsDatasetsMetric.Count).AppendLine();
+                                    // foreach(ObsDataset dataset in obsDatasetsMetric)
+                                    // {
+                                    //     if (dataset == interestingObject) continue;
+                                    //     sb.AppendFormat("    {0}", getGraphVizNodeDefinition(dataset)).AppendLine();
+                                    // }
+                                    // sb.AppendLine("  }");
 
-                                    List<ObsDataset> obsDatasetsMonitor = allDatasetsInGroup.Where(d => (d.ObjectType & ObsCompositeObjectType.MonitorSupportDataset) == ObsCompositeObjectType.MonitorSupportDataset).ToList();
+                                    // List<ObsDataset> obsDatasetsMonitor = allDatasetsInGroup.Where(d => (d.ObjectType & ObsCompositeObjectType.MonitorSupportDataset) == ObsCompositeObjectType.MonitorSupportDataset).ToList();
     
-                                    sb.AppendLine("  subgraph cluster_ds_monitor_support {");
-                                    sb.AppendFormat("    label=\"📟 Monitor Support Datasets ({0})\" style=\"filled\" fillcolor=\"seashell\"", obsDatasetsMonitor.Count).AppendLine();
-                                    foreach(ObsDataset dataset in obsDatasetsMonitor)
-                                    {
-                                        if (dataset == interestingObject) continue;
-                                        sb.AppendFormat("    {0}", getGraphVizNodeDefinition(dataset)).AppendLine();
-                                    }
-                                    sb.AppendLine("  }");
+                                    // sb.AppendLine("  subgraph cluster_ds_monitor_support {");
+                                    // sb.AppendFormat("    label=\"📟 Monitor Support Datasets ({0})\" style=\"filled\" fillcolor=\"seashell\"", obsDatasetsMonitor.Count).AppendLine();
+                                    // foreach(ObsDataset dataset in obsDatasetsMonitor)
+                                    // {
+                                    //     if (dataset == interestingObject) continue;
+                                    //     sb.AppendFormat("    {0}", getGraphVizNodeDefinition(dataset)).AppendLine();
+                                    // }
+                                    // sb.AppendLine("  }");
 
                                     break;
 
@@ -1312,15 +1314,31 @@ namespace Observe.EntityExplorer
                     // Out->here, so skip the double-linking. The links to Stages will explain what's going on
                     continue;
                 }
-                else if (relationship.RelatedObject == interestingObject)
+                else if (relationship.ThisObject is ObsDataset)                
                 {
-                    // here->out
-                    sb.AppendLine(getGraphVizEdgeDefinition(relationship));
+                    ObsDataset interestingDataset = (ObsDataset)relationship.ThisObject;
+                    if ((interestingDataset.ObjectType & ObsCompositeObjectType.MetricSMADataset) == ObsCompositeObjectType.MetricSMADataset)
+                    {
+                        // Let's not output to metric-sma-for-####
+                        continue;
+                    }
+                    else if ((interestingDataset.ObjectType & ObsCompositeObjectType.MonitorSupportDataset) == ObsCompositeObjectType.MonitorSupportDataset)
+                    {
+                        // Let's not output monitor/####
+                        continue;
+                    }
                 }
-                else
+                else if (relationship.RelatedObject is ObsDataset)                
                 {
-                    sb.AppendLine(getGraphVizEdgeDefinition(relationship));
+                    ObsDataset interestingDataset = (ObsDataset)relationship.RelatedObject;
+                    if ((interestingDataset.ObjectType & ObsCompositeObjectType.MonitorSupportDataset) == ObsCompositeObjectType.MonitorSupportDataset)
+                    {
+                        // Let's not output monitor/####
+                        continue;
+                    }
                 }
+
+                sb.AppendLine(getGraphVizEdgeDefinition(relationship));
             }
             
             // Close the entire doc
@@ -1507,14 +1525,71 @@ namespace Observe.EntityExplorer
                     break;
             }
 
-            if (highlight == true)
+            // Make HTML tile with summary of object
+            StringBuilder sbDatasetTile = new StringBuilder(256);
+            sbDatasetTile.AppendLine  ("<TABLE BORDER=\"0\">");
+            sbDatasetTile.AppendFormat("<TR><TD COLSPAN=\"2\">{0}</TD></TR>", WebUtility.HtmlEncode(dataset.name)).AppendLine();
+
+            // Row for dataset type and interface
+            sbDatasetTile.Append      ("<TR>");
+            sbDatasetTile.AppendFormat("<TD ALIGN=\"left\">{0}{1}</TD>", nodeIcon, dataset.kind);
+            sbDatasetTile.AppendFormat("<TD ALIGN=\"left\">{0}{1}</TD>", getIconDatasetInterfaceType(dataset), (dataset.Metrics.Count > 0) ? String.Format(": {0}", dataset.Metrics.Count) : String.Empty);
+            sbDatasetTile.AppendLine  ("</TR>");
+
+            // Row on the views and errors
+            if (dataset.Acceleration.state == "Error" || getIconDatasetViewType(dataset).Length > 0)
             {
-                return String.Format("{0} [label=\"{1}{2}\" shape=\"{3}\" color=\"{4}\" tooltip=\"{5}\" style=\"filled\" fillcolor=\"pink\" URL=\"{6}\" target=\"_blank\"]", getGraphVizNodeName(dataset), nodeIcon, WebUtility.HtmlEncode(dataset.name.Replace("/", "/\n")), nodeShape, nodeColor, WebUtility.HtmlEncode(dataset.description), getLinkToEntity(dataset));
+                sbDatasetTile.Append      ("<TR>");
+                sbDatasetTile.AppendFormat("<TD ALIGN=\"left\">{0}</TD>", getIconDatasetViewType(dataset));
+                sbDatasetTile.AppendFormat("<TD ALIGN=\"left\" tooltip=\"{1}\">{0}</TD>", dataset.Acceleration.state == "Error" ? "❌ Error" : String.Empty, dataset.Acceleration.ErrorMessage);
+                sbDatasetTile.AppendLine  ("</TR>");
+            }
+
+            // Row for Acceleration
+            sbDatasetTile.Append      ("<TR>");
+            sbDatasetTile.AppendFormat("<TD ALIGN=\"left\">Conf: {0}</TD>", dataset.Acceleration.StalenessConfigured);
+            if (dataset.Acceleration.StalenessEffective < dataset.Acceleration.StalenessConfigured)
+            {
+                sbDatasetTile.AppendFormat("<TD ALIGN=\"left\"><FONT color=\"red\">Eff: {0}</FONT></TD>", dataset.Acceleration.StalenessEffective);
             }
             else
             {
-                return String.Format("{0} [label=\"{1}{2}\" shape=\"{3}\" color=\"{4}\" URL=\"{5}\" target=\"_blank\"]", getGraphVizNodeName(dataset), nodeIcon, WebUtility.HtmlEncode(dataset.name.Replace("/", "/\n")), nodeShape, nodeColor, getLinkToEntity(dataset));
+                sbDatasetTile.AppendFormat("<TD ALIGN=\"left\">Eff: {0}</TD>", dataset.Acceleration.StalenessEffective);
             }
+            sbDatasetTile.AppendLine  ("</TR>");
+
+            // Costs
+            sbDatasetTile.Append      ("<TR>");
+            sbDatasetTile.AppendFormat("<TD ALIGN=\"left\">{0}Transform: {1:##0.#}</TD>", getIconDatasetCostTransform(dataset.Transform1W.Credits), dataset.Transform1W.Credits.ToString("##0.#"));
+            sbDatasetTile.AppendFormat("<TD ALIGN=\"left\">{0}Query: {1:##0.#}</TD>", getIconDatasetCostQuery(dataset.Query1W.Credits), dataset.Query1W.Credits.ToString("##0.#"));
+            sbDatasetTile.AppendLine  ("</TR>");
+
+            // Rows for dependencies
+            List<ObjectRelationship> entityDataRelationshipsTarget = GetRelationshipsOfRelated(dataset, ObsObjectRelationshipType.ProvidesData);
+            List<ObjectRelationship> entityLinkRelationshipsTarget = GetRelationshipsOfRelated(dataset, ObsObjectRelationshipType.Linked);
+            List<ObjectRelationship> monitorDataRelationships = entityDataRelationshipsTarget.Where(r => (((ObsCompositeObject)r.ThisObject).ObjectType & ObsCompositeObjectType.MonitorSupportDataset) == ObsCompositeObjectType.MonitorSupportDataset).ToList();
+            List<ObjectRelationship> entityDashboardRelationshipsData = entityDataRelationshipsTarget.Where(r => (((ObsCompositeObject)r.ThisObject).ObjectType & ObsCompositeObjectType.Dashboard) == ObsCompositeObjectType.Dashboard).ToList();
+            List<ObjectRelationship> entityDashboardRelationshipsLink = entityLinkRelationshipsTarget.Where(r => (((ObsCompositeObject)r.ThisObject).ObjectType & ObsCompositeObjectType.Dashboard) == ObsCompositeObjectType.Dashboard).ToList();
+            List<ObjectRelationship> entityWorksheetRelationshipsData = entityDataRelationshipsTarget.Where(r => (((ObsCompositeObject)r.ThisObject).ObjectType & ObsCompositeObjectType.Worksheet) == ObsCompositeObjectType.Worksheet).ToList();
+            List<ObjectRelationship> entityWorksheetRelationshipsLink = entityLinkRelationshipsTarget.Where(r => (((ObsCompositeObject)r.ThisObject).ObjectType & ObsCompositeObjectType.Worksheet) == ObsCompositeObjectType.Worksheet).ToList();
+            sbDatasetTile.Append      ("<TR>");
+            sbDatasetTile.AppendFormat("<TD ALIGN=\"left\">{0}Dashboard: {1}</TD>", getIconType(new ObsDashboard()), entityDashboardRelationshipsData.Count + entityDashboardRelationshipsLink.Count);
+            sbDatasetTile.AppendFormat("<TD ALIGN=\"left\">{0}Users: {1}</TD>", getIconType(new ObsUser()), dataset.Query1WUsers.Count());
+            sbDatasetTile.AppendLine  ("</TR>");
+            sbDatasetTile.Append      ("<TR>");
+            sbDatasetTile.AppendFormat("<TD ALIGN=\"left\">{0}Monitor: {1}</TD>", getIconType(new ObsMonitor2()), monitorDataRelationships.Count);
+            sbDatasetTile.AppendFormat("<TD ALIGN=\"left\">{0}Worksheet: {1}</TD>", getIconType(new ObsWorksheet()), entityWorksheetRelationshipsData.Count + entityWorksheetRelationshipsLink.Count);
+            sbDatasetTile.AppendLine  ("</TR>");
+            sbDatasetTile.Append      ("</TABLE>");
+
+            if (highlight == true)
+            {
+                return String.Format("{0} [label=<{1}> shape=\"{2}\" color=\"{3}\" tooltip=\"{4}\" style=\"filled\" fillcolor=\"pink\" URL=\"{5}\" target=\"_blank\"]", getGraphVizNodeName(dataset), sbDatasetTile.ToString(), nodeShape, nodeColor, WebUtility.HtmlEncode(dataset.description), getLinkToEntity(dataset));
+            }
+            else
+            {
+                return String.Format("{0} [label=<{1}> shape=\"{2}\" color=\"{3}\" URL=\"{4}\" target=\"_blank\"]", getGraphVizNodeName(dataset), sbDatasetTile.ToString(), nodeShape, nodeColor, getLinkToEntity(dataset));
+            }        
         }
 
         private string getGraphVizNodeDefinition(ObsStage stage)
@@ -1595,16 +1670,38 @@ namespace Observe.EntityExplorer
         private string getGraphVizNodeDefinition(ObsDashboard dashboard, bool highlight)
         {
             string nodeColor = "black";
-            string nodeIcon = "📈";
+            string nodeIcon = getIconType(dashboard);;
             string nodeShape = "tab";
+
+            // Make HTML tile with summary of object
+            StringBuilder sbDashboardTile = new StringBuilder(256);
+            sbDashboardTile.AppendLine  ("<TABLE BORDER=\"0\">");
+            sbDashboardTile.AppendFormat("<TR><TD COLSPAN=\"2\">{0}{1}</TD></TR>", nodeIcon, WebUtility.HtmlEncode(dashboard.name)).AppendLine();
+
+            // Costs
+            sbDashboardTile.Append      ("<TR>");
+            sbDashboardTile.AppendFormat("<TD ALIGN=\"left\">{0}Query: {1:##0.#}</TD>", getIconDashboardCostQuery(dashboard.Query1W.Credits), dashboard.Query1W.Credits.ToString("##0.#"));
+            sbDashboardTile.AppendFormat("<TD ALIGN=\"left\">{0}Users: {1}</TD>", getIconType(new ObsUser()), dashboard.Query1WUsers.Count());
+            sbDashboardTile.AppendLine  ("</TR>");
+
+            // Rows for components
+            sbDashboardTile.Append      ("<TR>");
+            sbDashboardTile.AppendFormat("<TD ALIGN=\"left\">Widgets: {0}</TD>", dashboard.NumWidgets);
+            sbDashboardTile.AppendFormat("<TD ALIGN=\"left\">Stages: {0}</TD>", dashboard.NumStages);
+            sbDashboardTile.AppendLine  ("</TR>");
+            sbDashboardTile.Append      ("<TR>");
+            sbDashboardTile.AppendFormat("<TD ALIGN=\"left\">Parameters: {0}</TD>", dashboard.NumParameters);
+            sbDashboardTile.AppendFormat("<TD ALIGN=\"left\">Stages Vis: {0}</TD>", dashboard.NumStagesVisible);
+            sbDashboardTile.AppendLine  ("</TR>");
+            sbDashboardTile.Append      ("</TABLE>");
 
             if (highlight == true)
             {
-                return String.Format("{0} [label=\"{1}{2}\" shape=\"{3}\" color=\"{4}\" style=\"filled\" fillcolor=\"pink\" URL=\"{5}\" target=\"_blank\"]", getGraphVizNodeName(dashboard), nodeIcon, WebUtility.HtmlEncode(dashboard.name.Replace("/", "/\n")), nodeShape, nodeColor, getLinkToEntity(dashboard));
+                return String.Format("{0} [label=<{1}> shape=\"{2}\" color=\"{3}\" style=\"filled\" fillcolor=\"pink\" URL=\"{4}\" target=\"_blank\"]", getGraphVizNodeName(dashboard), sbDashboardTile.ToString(), nodeShape, nodeColor, getLinkToEntity(dashboard));
             }
             else
             {
-                return String.Format("{0} [label=\"{1}{2}\" shape=\"{3}\" color=\"{4}\" URL=\"{5}\" target=\"_blank\"]", getGraphVizNodeName(dashboard), nodeIcon, WebUtility.HtmlEncode(dashboard.name.Replace("/", "/\n")), nodeShape, nodeColor, getLinkToEntity(dashboard));
+                return String.Format("{0} [label=<{1}> shape=\"{2}\" color=\"{3}\" URL=\"{4}\" target=\"_blank\"]", getGraphVizNodeName(dashboard), sbDashboardTile.ToString(), nodeShape, nodeColor, getLinkToEntity(dashboard));
             }
         }
 
@@ -1648,14 +1745,54 @@ namespace Observe.EntityExplorer
                 nodeColor = "gray";
             }
 
+            // Make HTML tile with summary of object
+            StringBuilder sbMonitorTile = new StringBuilder(256);
+            sbMonitorTile.AppendLine  ("<TABLE BORDER=\"0\">");
+            sbMonitorTile.AppendFormat("<TR><TD COLSPAN=\"2\">{0}</TD></TR>", WebUtility.HtmlEncode(monitor.name)).AppendLine();
+
+            // Row for dataset type and interface
+            sbMonitorTile.Append      ("<TR>");
+            sbMonitorTile.AppendFormat("<TD ALIGN=\"left\">{0}{1}</TD>", nodeIcon, monitor.kind);
+            sbMonitorTile.AppendFormat("<TD ALIGN=\"left\">{0}</TD>", monitor.IsEnabled == false ? "❌ Disabled" : String.Empty);
+            sbMonitorTile.AppendLine  ("</TR>");
+
+            // Row for Acceleration
+            if (monitor.Acceleration != null)
+            {
+                sbMonitorTile.Append      ("<TR>");            
+                sbMonitorTile.AppendFormat("<TD ALIGN=\"left\">Conf: {0}</TD>", monitor.Acceleration.StalenessConfigured);
+                if (monitor.Acceleration.StalenessEffective < monitor.Acceleration.StalenessConfigured)
+                {
+                    sbMonitorTile.AppendFormat("<TD ALIGN=\"left\"><FONT color=\"red\">Eff: {0}</FONT></TD>", monitor.Acceleration.StalenessEffective);
+                }
+                else
+                {
+                    sbMonitorTile.AppendFormat("<TD ALIGN=\"left\">Eff: {0}</TD>", monitor.Acceleration.StalenessEffective);
+                }
+                sbMonitorTile.AppendLine  ("</TR>");
+            }
+
+            // Costs
+            sbMonitorTile.Append      ("<TR>");
+            sbMonitorTile.AppendFormat("<TD ALIGN=\"left\">{0}Transform: {1:##0.#}</TD>", getIconMonitorCostTransform(monitor.Transform1W.Credits), monitor.Transform1W.Credits.ToString("##0.#"));
+            sbMonitorTile.AppendLine  ("</TR>");
+
+            sbMonitorTile.Append      ("<TR>");
+            sbMonitorTile.AppendFormat("<TD ALIGN=\"left\">Actions: {0}</TD>", monitor.NumActions);
+            sbMonitorTile.AppendFormat("<TD ALIGN=\"left\">Stages: {0}</TD>", monitor.NumStages);
+            sbMonitorTile.AppendLine  ("</TR>");
+
+            sbMonitorTile.Append      ("</TABLE>");
+
             if (highlight == true)
             {
-                return String.Format("{0} [label=\"{1}{2}\" shape=\"{3}\" color=\"{4}\" style=\"filled\" fillcolor=\"pink\" URL=\"{5}\" target=\"_blank\"]", getGraphVizNodeName(monitor), nodeIcon, WebUtility.HtmlEncode(monitor.name.Replace("/", "/\n")), nodeShape, nodeColor, getLinkToEntity(monitor));
+                return String.Format("{0} [label=<{1}> shape=\"{2}\" color=\"{3}\" style=\"filled\" fillcolor=\"pink\" URL=\"{4}\" target=\"_blank\"]", getGraphVizNodeName(monitor), sbMonitorTile.ToString(), nodeShape, nodeColor, getLinkToEntity(monitor));
             }
             else
             {
-                return String.Format("{0} [label=\"{1}{2}\" shape=\"{3}\" color=\"{4}\" URL=\"{5}\" target=\"_blank\"]", getGraphVizNodeName(monitor), nodeIcon, WebUtility.HtmlEncode(monitor.name.Replace("/", "/\n")), nodeShape, nodeColor, getLinkToEntity(monitor));
+                return String.Format("{0} [label=<{1}> shape=\"{2}\" color=\"{3}\" URL=\"{4}\" target=\"_blank\"]", getGraphVizNodeName(monitor), sbMonitorTile.ToString(), nodeShape, nodeColor, getLinkToEntity(monitor));
             }
+
         }
 
         private string getGraphVizNodeDefinition(ObsMonitor2 monitor)
@@ -1690,13 +1827,52 @@ namespace Observe.EntityExplorer
                 nodeColor = "gray";
             }
 
+            // Make HTML tile with summary of object
+            StringBuilder sbMonitorTile = new StringBuilder(256);
+            sbMonitorTile.AppendLine  ("<TABLE BORDER=\"0\">");
+            sbMonitorTile.AppendFormat("<TR><TD COLSPAN=\"2\">{0}</TD></TR>", WebUtility.HtmlEncode(monitor.name)).AppendLine();
+
+            // Row for dataset type and interface
+            sbMonitorTile.Append      ("<TR>");
+            sbMonitorTile.AppendFormat("<TD ALIGN=\"left\">{0}{1}</TD>", nodeIcon, monitor.kind);
+            sbMonitorTile.AppendFormat("<TD ALIGN=\"left\">{0}</TD>", monitor.IsEnabled == false ? "❌ Disabled" : String.Empty);
+            sbMonitorTile.AppendLine  ("</TR>");
+
+            // Row for Acceleration
+            if (monitor.SupportingDataset != null)
+            {
+                sbMonitorTile.Append      ("<TR>");            
+                sbMonitorTile.AppendFormat("<TD ALIGN=\"left\">Conf: {0}</TD>", monitor.SupportingDataset.Acceleration.StalenessConfigured);
+                if (monitor.SupportingDataset.Acceleration.StalenessEffective < monitor.SupportingDataset.Acceleration.StalenessConfigured)
+                {
+                    sbMonitorTile.AppendFormat("<TD ALIGN=\"left\"><FONT color=\"red\">Eff: {0}</FONT></TD>", monitor.SupportingDataset.Acceleration.StalenessEffective);
+                }
+                else
+                {
+                    sbMonitorTile.AppendFormat("<TD ALIGN=\"left\">Eff: {0}</TD>", monitor.SupportingDataset.Acceleration.StalenessEffective);
+                }
+                sbMonitorTile.AppendLine  ("</TR>");
+            }
+
+            // Costs
+            sbMonitorTile.Append      ("<TR>");
+            sbMonitorTile.AppendFormat("<TD ALIGN=\"left\">{0}Transform: {1:##0.#}</TD>", getIconMonitorCostTransform(monitor.Transform1W.Credits), monitor.Transform1W.Credits.ToString("##0.#"));
+            sbMonitorTile.AppendLine  ("</TR>");
+
+            sbMonitorTile.Append      ("<TR>");
+            sbMonitorTile.AppendFormat("<TD ALIGN=\"left\">Actions: {0}</TD>", monitor.NumActions);
+            sbMonitorTile.AppendFormat("<TD ALIGN=\"left\">Stages: {0}</TD>", monitor.NumStages);
+            sbMonitorTile.AppendLine  ("</TR>");
+
+            sbMonitorTile.Append      ("</TABLE>");
+
             if (highlight == true)
             {
-                return String.Format("{0} [label=\"{1}{2}\" shape=\"{3}\" color=\"{4}\" style=\"filled\" fillcolor=\"pink\" URL=\"{5}\" target=\"_blank\"]", getGraphVizNodeName(monitor), nodeIcon, WebUtility.HtmlEncode(monitor.name.Replace("/", "/\n")), nodeShape, nodeColor, getLinkToEntity(monitor));
+                return String.Format("{0} [label=<{1}> shape=\"{2}\" color=\"{3}\" style=\"filled\" fillcolor=\"pink\" URL=\"{4}\" target=\"_blank\"]", getGraphVizNodeName(monitor), sbMonitorTile.ToString(), nodeShape, nodeColor, getLinkToEntity(monitor));
             }
             else
             {
-                return String.Format("{0} [label=\"{1}{2}\" shape=\"{3}\" color=\"{4}\" URL=\"{5}\" target=\"_blank\"]", getGraphVizNodeName(monitor), nodeIcon, WebUtility.HtmlEncode(monitor.name.Replace("/", "/\n")), nodeShape, nodeColor, getLinkToEntity(monitor));
+                return String.Format("{0} [label=<{1}> shape=\"{2}\" color=\"{3}\" URL=\"{4}\" target=\"_blank\"]", getGraphVizNodeName(monitor), sbMonitorTile.ToString(), nodeShape, nodeColor, getLinkToEntity(monitor));
             }
         }
 
@@ -1713,11 +1889,11 @@ namespace Observe.EntityExplorer
 
             if (highlight == true)
             {
-                return String.Format("{0} [label=\"{1}{2}\" shape=\"{3}\" color=\"{4}\" style=\"filled\" fillcolor=\"pink\" URL=\"{5}\" target=\"_blank\"]", getGraphVizNodeName(worksheet), nodeIcon, WebUtility.HtmlEncode(worksheet.name.Replace("/", "/\n")), nodeShape, nodeColor, getLinkToEntity(worksheet));
+                return String.Format("{0} [label=\"{1}{2}\" shape=\"{3}\" color=\"{4}\" style=\"filled\" fillcolor=\"pink\" URL=\"{5}\" target=\"_blank\"]", getGraphVizNodeName(worksheet), nodeIcon, WebUtility.HtmlEncode(worksheet.name), nodeShape, nodeColor, getLinkToEntity(worksheet));
             }
             else
             {
-                return String.Format("{0} [label=\"{1}{2}\" shape=\"{3}\" color=\"{4}\" URL=\"{5}\" target=\"_blank\"]", getGraphVizNodeName(worksheet), nodeIcon, WebUtility.HtmlEncode(worksheet.name.Replace("/", "/\n")), nodeShape, nodeColor, getLinkToEntity(worksheet));
+                return String.Format("{0} [label=\"{1}{2}\" shape=\"{3}\" color=\"{4}\" URL=\"{5}\" target=\"_blank\"]", getGraphVizNodeName(worksheet), nodeIcon, WebUtility.HtmlEncode(worksheet.name), nodeShape, nodeColor, getLinkToEntity(worksheet));
             }
         }
 
@@ -1734,14 +1910,14 @@ namespace Observe.EntityExplorer
                 nodeColor = "gray";
             }
 
-            return String.Format("{0} [label=\"{1}{2}\" shape=\"{3}\" color=\"{4}\" URL=\"{5}\" target=\"_blank\"]", getGraphVizNodeName(datastream), nodeIcon, WebUtility.HtmlEncode(datastream.name.Replace("/", "/\n")), nodeShape, nodeColor, getLinkToEntity(datastream));
+            return String.Format("{0} [label=\"{1}{2}\" shape=\"{3}\" color=\"{4}\" URL=\"{5}\" target=\"_blank\"]", getGraphVizNodeName(datastream), nodeIcon, WebUtility.HtmlEncode(datastream.name), nodeShape, nodeColor, getLinkToEntity(datastream));
         }
 
         private string getGraphVizNodeDefinition(ObsToken token)
         {
             string nodeColor = "purple";
 
-            string nodeIcon = getIconTokenType(token);
+            string nodeIcon = getIconType(token);
 
             string nodeShape = "rarrow";
 
@@ -1750,7 +1926,7 @@ namespace Observe.EntityExplorer
                 nodeColor = "gray";
             }
 
-            return String.Format("{0} [label=\"{1}{2}\" shape=\"{3}\" color=\"{4}\" URL=\"{5}\" target=\"_blank\"]", getGraphVizNodeName(token), nodeIcon, WebUtility.HtmlEncode(token.name.Replace("/", "/\n")), nodeShape, nodeColor, getLinkToEntity(token));
+            return String.Format("{0} [label=\"{1}{2}\" shape=\"{3}\" color=\"{4}\" URL=\"{5}\" target=\"_blank\"]", getGraphVizNodeName(token), nodeIcon, WebUtility.HtmlEncode(token.name), nodeShape, nodeColor, getLinkToEntity(token));
         }
 
         private string getGraphVizNodeDefinition(ObsUser user)
@@ -1763,7 +1939,7 @@ namespace Observe.EntityExplorer
             string nodeIcon = String.Format("{0}{1}", getIconOriginType(user.UserType), getIconUserStatus(user));
             string nodeShape = "rectangle";
 
-            return String.Format("{0} [label=\"{1}{2}\" shape=\"{3}\" color=\"{4}\" tooltip=\"{5} {6}\"]", getGraphVizNodeName(user), nodeIcon, WebUtility.HtmlEncode(user.name.Replace("/", "/\n")), nodeShape, nodeColor, user.email, user.id);
+            return String.Format("{0} [label=\"{1}{2}\" shape=\"{3}\" color=\"{4}\" tooltip=\"{5} {6}\"]", getGraphVizNodeName(user), nodeIcon, WebUtility.HtmlEncode(user.name), nodeShape, nodeColor, user.email, user.id);
         }
 
         private string getGraphVizNodeDefinition(ObsRBACGroup group)
@@ -1772,7 +1948,7 @@ namespace Observe.EntityExplorer
             string nodeIcon = getIconOriginType(group);
             string nodeShape = "ellipse";
 
-            return String.Format("{0} [label=\"{1}{2}\n{3}\" shape=\"{4}\" color=\"{5}\" tooltip=\"{6}\"]", getGraphVizNodeName(group), nodeIcon, WebUtility.HtmlEncode(group.name.Replace("/", "/\n")), WebUtility.HtmlEncode(group.description.Replace("/", "/\n")), nodeShape, nodeColor, group.ID);
+            return String.Format("{0} [label=\"{1}{2}\n{3}\" shape=\"{4}\" color=\"{5}\" tooltip=\"{6}\"]", getGraphVizNodeName(group), nodeIcon, WebUtility.HtmlEncode(group.name), WebUtility.HtmlEncode(group.description.Replace("/", "/\n")), nodeShape, nodeColor, group.ID);
         }
 
         private string getGraphVizEdgeDefinition(ObjectRelationship relationship)
@@ -2093,7 +2269,7 @@ namespace Observe.EntityExplorer
             };
         }
 
-        internal string getIconTokenType(ObsToken obsToken)
+        internal string getIconType(ObsToken obsToken)
         {
             return obsToken.kind switch
             {
@@ -2110,13 +2286,37 @@ namespace Observe.EntityExplorer
         {
             return objectType switch
             {
-                ObsCompositeObjectType.MetricThresholdMonitor => "📈",
-                ObsCompositeObjectType.LogThresholdMonitor => "📜",
+                ObsCompositeObjectType.MetricThresholdMonitor        => "📈",
+                ObsCompositeObjectType.LogThresholdMonitor           => "📜",
                 ObsCompositeObjectType.ResourceCountThresholdMonitor => "🍫",
-                ObsCompositeObjectType.PromotionMonitor => "🕙",
-                ObsCompositeObjectType.ResourceTextValueMonitor => "🏆",
+                ObsCompositeObjectType.PromotionMonitor              => "🕙",
+                ObsCompositeObjectType.ResourceTextValueMonitor      => "🏆",
                 _ => "❓"
             };
+        }
+
+        internal string getIconDatasetInterfaceType(ObsDataset dataset)        
+        {
+            ObsCompositeObjectType objectType = dataset.ObjectType;
+            if ((objectType & ObsCompositeObjectType.InterfaceLogDataset) == ObsCompositeObjectType.InterfaceLogDataset)
+            {
+                return "📜 Log";
+            }
+            if ((objectType & ObsCompositeObjectType.InterfaceMetricDataset) == ObsCompositeObjectType.InterfaceMetricDataset)
+            {
+                return "📶 Metric";
+            }
+            return String.Empty;
+        }
+
+        internal string getIconDatasetViewType(ObsDataset dataset)
+        {
+            ObsCompositeObjectType objectType = dataset.ObjectType;
+            if ((objectType & ObsCompositeObjectType.ViewDataset) == ObsCompositeObjectType.ViewDataset)
+            {
+                return "🪟 view";
+            }
+            return String.Empty;
         }
 
         internal string getIconOriginType(ObsCompositeObject obsObject)
@@ -2294,6 +2494,103 @@ namespace Observe.EntityExplorer
             {
                 return ""; 
             }
+        }
+
+        internal string getIconDatasetCostTransform(decimal credits)
+        {
+            if (credits <= 200)
+            {
+                return "🟢";
+            }
+            else if (credits <= 500)
+            {
+                return "🟡";
+            }
+            else if (credits <= 1000)
+            {
+                return "🟠";
+            }
+            else if (credits <= 2000)
+            {
+                return "🔴";
+            }
+            else
+            {
+                return "🤒";
+            }
+        }
+
+        internal string getIconDatasetCostQuery(decimal credits)
+        {
+            if (credits <= 200)
+            {
+                return "🟢";
+            }
+            else if (credits <= 500)
+            {
+                return "🟡";
+            }
+            else if (credits <= 1000)
+            {
+                return "🟠";
+            }
+            else if (credits <= 2000)
+            {
+                return "🔴";
+            }
+            else
+            {
+                return "🤒";
+            }
+        }
+
+        internal string getIconMonitorCostTransform(decimal credits)
+        {
+            if (credits <= 50)
+            {
+                return "🟢";
+            }
+            else if (credits <= 100)
+            {
+                return "🟡";
+            }
+            else if (credits <= 200)
+            {
+                return "🟠";
+            }
+            else if (credits <= 400)
+            {
+                return "🔴";
+            }
+            else
+            {
+                return "🤒";
+            }
+        }
+
+        internal string getIconDashboardCostQuery(decimal credits)
+        {
+            if (credits <= 200)
+            {
+                return "🟢";
+            }
+            else if (credits <= 500)
+            {
+                return "🟡";
+            }
+            else if (credits <= 1000)
+            {
+                return "🟠";
+            }
+            else if (credits <= 2000)
+            {
+                return "🔴";
+            }
+            else
+            {
+                return "🤒";
+            }
+            
         }
 
         #endregion
